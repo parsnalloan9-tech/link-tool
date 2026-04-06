@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkMagic - Custom Short Links</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --text: #f0f0f8;
+    --muted: #8888aa;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-orb.one { width: 400px; height: 400px; background: rgba(124,58,237,0.15); top: -100px; left: -100px; }
+  .glow-orb.two { width: 300px; height: 300px; background: rgba(6,182,212,0.1); bottom: -50px; right: -50px; }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 6px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeUp 0.3s ease; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Form */
+  .form-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  input[type="text"], input[type="url"], textarea, select {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  .input-with-prefix {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .input-with-prefix:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+
+  .input-prefix {
+    padding: 12px 14px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+    background: rgba(124,58,237,0.1);
+  }
+
+  .input-with-prefix input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    flex: 1;
+  }
+
+  .input-with-prefix input:focus {
+    box-shadow: none;
+  }
+
+  /* Image upload */
+  .image-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .image-upload-area:hover {
+    border-color: var(--accent);
+    background: rgba(124,58,237,0.05);
+  }
+
+  .image-upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-text { color: var(--muted); font-size: 0.9rem; }
+  .upload-text strong { color: var(--accent2); }
+
+  #imagePreview {
+    max-width: 100%;
+    max-height: 180px;
+    border-radius: 10px;
+    object-fit: cover;
+    display: none;
+    margin: 0 auto;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #9333ea);
+    color: white;
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 14px;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(124,58,237,0.4);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-copy {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.82rem;
+    padding: 8px 14px;
+    border-radius: 8px;
+  }
+
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* Result */
+  #resultBox {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .result-link-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .result-link {
+    flex: 1;
+    color: var(--accent2);
+    font-size: 0.95rem;
+    word-break: break-all;
+    font-weight: 500;
+  }
+
+  /* Preview card */
+  .preview-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    color: #000;
+  }
+
+  .preview-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-card-body {
+    padding: 14px;
+  }
+
+  .preview-card-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #111;
+    margin-bottom: 4px;
+  }
+
+  .preview-card-desc {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
+  .preview-card-url {
+    font-size: 0.78rem;
+    color: #999;
+  }
+
+  /* Links List */
+  .links-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .link-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+
+  .link-item:hover { border-color: var(--accent); }
+
+  .link-thumb {
+    width: 70px; height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    overflow: hidden;
+  }
+
+  .link-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+  .link-info { flex: 1; min-width: 0; }
+
+  .link-title {
+    font-weight: 600;
+    font-size: 0.92rem;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .link-short {
+    color: var(--accent2);
+    font-size: 0.82rem;
+    margin-bottom: 3px;
+  }
+
+  .link-dest {
+    color: var(--muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .link-actions { display: flex; gap: 6px; align-items: center; }
+
+  .clicks-badge {
+    background: rgba(124,58,237,0.15);
+    color: var(--accent2);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+
+  .btn-del {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: var(--danger);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-del:hover { background: rgba(239,68,68,0.2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--success);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    white-space: nowrap;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Info box */
+  .info-box {
+    background: rgba(6,182,212,0.08);
+    border: 1px solid rgba(6,182,212,0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 0.85rem;
+    color: var(--accent2);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .info-box strong { color: white; }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 12px; }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .step-num {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .step-text { font-size: 0.88rem; line-height: 1.6; color: var(--muted); }
+  .step-text strong { color: var(--text); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.5rem; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb one"></div>
+<div class="glow-orb two"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔗</div>
+      <h1>LinkMagic</h1>
+    </div>
+    <p class="subtitle">Custom Short Links • Custom Thumbnail • Free & Easy</p>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('create')">✨ Link بنائیں</button>
+    <button class="tab-btn" onclick="switchTab('links')">📋 میرے Links</button>
+    <button class="tab-btn" onclick="switchTab('guide')">📖 Guide</button>
+  </div>
+
+  <!-- CREATE TAB -->
+  <div id="tab-create" class="tab-content active">
+
+    <div class="info-box">
+      ℹ️ یہ tool آپ کے browser میں چلتا ہے۔ <strong>GitHub Pages یا Netlify پر deploy کریں</strong> تو دنیا میں کہیں سے بھی use ہوگا — بالکل free!
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🎯</span> Link Details</div>
+
+      <div class="form-group">
+        <label>اصل Link (جہاں redirect ہو)</label>
+        <input type="url" id="destUrl" placeholder="https://example.com/article?utm_source=linkmagic" />
+      </div>
+
+      <div class="form-group">
+        <label>Custom Short Code</label>
+        <div class="input-with-prefix">
+          <span class="input-prefix">yoursite.com/</span>
+          <input type="text" id="shortCode" placeholder="meri-link" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Title (Facebook پر دکھے گا)</label>
+        <input type="text" id="linkTitle" placeholder="یہ article بہت کام کا ہے!" />
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="linkDesc" placeholder="مختصر تعارف لکھیں..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🖼️</span> Custom Thumbnail</div>
+
+      <div class="form-group">
+        <label>Image URL (یا نیچے upload کریں)</label>
+        <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg" oninput="previewFromUrl()" />
+      </div>
+
+      <div class="form-group">
+        <label>یا Image Upload کریں</label>
+        <div class="image-upload-area" id="uploadArea">
+          <input type="file" accept="image/*" onchange="handleImageUpload(event)" />
+          <div id="uploadPlaceholder">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">یہاں <strong>click کریں</strong> یا image drag کریں</div>
+          </div>
+          <img id="imagePreview" alt="Preview" />
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="createLink()">
+      ✨ Link بنائیں
+    </button>
+
+    <!-- Result -->
+    <div id="resultBox" class="card" style="margin-top:20px;">
+      <div class="card-title"><span>✅</span> آپ کا Link تیار ہے!</div>
+
+      <div class="result-link-row">
+        <span class="result-link" id="generatedLink">-</span>
+        <button class="btn btn-copy" onclick="copyLink()">📋 Copy</button>
+      </div>
+
+      <label style="margin-bottom:10px; display:block;">Facebook Preview:</label>
+      <div class="preview-card">
+        <img id="prevImg" src="" alt="" onerror="this.style.display='none'" />
+        <div class="preview-card-body">
+          <div class="preview-card-title" id="prevTitle">Title</div>
+          <div class="preview-card-desc" id="prevDesc">Description</div>
+          <div class="preview-card-url" id="prevUrl">yoursite.com</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINKS TAB -->
+  <div id="tab-links" class="tab-content">
+    <div class="card">
+      <div class="card-title"><span>📋</span> میرے تمام Links</div>
+      <div id="linksList"></div>
+    </div>
+  </div>
+
+  <!-- GUIDE TAB -->
+  <div id="tab-guide" class="tab-content">
+    <div class="card">
+      <div class="card-title"><span>🚀</span> Free میں Deploy کیسے کریں؟</div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>GitHub Account بنائیں</strong><br>
+            github.com پر جائیں اور free account بنائیں
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>New Repository بنائیں</strong><br>
+            New repo بنائیں، نام رکھیں: <strong>link-tool</strong>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>یہ HTML file upload کریں</strong><br>
+            اس file کو <strong>index.html</strong> نام سے upload کریں
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>GitHub Pages Enable کریں</strong><br>
+            Settings → Pages → Source: main branch → Save کریں
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-text">
+            <strong>آپ کی website تیار!</strong><br>
+            <strong>yourname.github.io/link-tool</strong> پر آپ کا tool live ہوگا — بالکل free!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>💡</span> Facebook Thumbnail کیسے کام کرتی ہے؟</div>
+      <div style="color:var(--muted); font-size:0.88rem; line-height:1.8;">
+        Facebook جب کوئی link دیکھتا ہے تو اس page کے <strong style="color:var(--text);">Open Graph meta tags</strong> پڑھتا ہے۔<br><br>
+        ✅ <strong style="color:var(--text);">og:image</strong> = وہ picture جو Facebook دکھائے<br>
+        ✅ <strong style="color:var(--text);">og:title</strong> = بڑا heading<br>
+        ✅ <strong style="color:var(--text);">og:description</strong> = چھوٹی تفصیل<br><br>
+        جب آپ یہ tool GitHub Pages پر deploy کریں گے، تو ہر link کے لیے الگ page بنے گا جس میں یہ meta tags آپ کی مرضی کے ہوں گے۔
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✅ Copy ہو گیا!</div>
+
+<script>
+  let links = JSON.parse(localStorage.getItem('linkmagic_links') || '[]');
+  let currentImageData = '';
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['create','links','guide'][i] === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'links') renderLinks();
+  }
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      currentImageData = ev.target.result;
+      const prev = document.getElementById('imagePreview');
+      prev.src = currentImageData;
+      prev.style.display = 'block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function previewFromUrl() {
+    const url = document.getElementById('imageUrl').value;
+    if (url) {
+      currentImageData = url;
+      const prev = document.getElementById('imagePreview');
+      prev.src = url;
+      prev.style.display = 'block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+    }
+  }
+
+  function createLink() {
+    const dest = document.getElementById('destUrl').value.trim();
+    const code = document.getElementById('shortCode').value.trim();
+    const title = document.getElementById('linkTitle').value.trim();
+    const desc = document.getElementById('linkDesc').value.trim();
+    const imgUrl = document.getElementById('imageUrl').value.trim();
+    const image = currentImageData || imgUrl;
+
+    if (!dest) { showToast('❌ اصل link لکھیں!', '#ef4444'); return; }
+    if (!code) { showToast('❌ Short code لکھیں!', '#ef4444'); return; }
+
+    // Check duplicate
+    if (links.find(l => l.code === code)) {
+      showToast('❌ یہ code پہلے سے موجود ہے!', '#ef4444'); return;
+    }
+
+    const link = {
+      id: Date.now(),
+      code,
+      dest,
+      title: title || 'My Link',
+      desc: desc || '',
+      image: image || '',
+      clicks: 0,
+      created: new Date().toLocaleDateString('ur-PK')
+    };
+
+    links.unshift(link);
+    saveLinks();
+
+    // Show result
+    const shortUrl = `yoursite.com/${code}`;
+    document.getElementById('generatedLink').textContent = shortUrl;
+    document.getElementById('prevTitle').textContent = link.title;
+    document.getElementById('prevDesc').textContent = link.desc;
+    document.getElementById('prevUrl').textContent = shortUrl;
+
+    if (link.image) {
+      const img = document.getElementById('prevImg');
+      img.src = link.image;
+      img.style.display = 'block';
+    }
+
+    document.getElementById('resultBox').style.display = 'block';
+    document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth' });
+
+    showToast('✅ Link بن گئی!');
+  }
+
+  function copyLink() {
+    const link = document.getElementById('generatedLink').textContent;
+    navigator.clipboard.writeText(link).catch(() => {});
+    showToast('📋 Copy ہو گیا!');
+  }
+
+  function renderLinks() {
+    const container = document.getElementById('linksList');
+    if (!links.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔗</div>
+          <div>ابھی کوئی link نہیں ہے</div>
+          <div style="font-size:0.82rem; margin-top:6px;">پہلے tab میں جا کر link بنائیں</div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="links-list">${links.map(l => `
+      <div class="link-item" id="li-${l.id}">
+        <div class="link-thumb">
+          ${l.image ? `<img src="${l.image}" onerror="this.parentElement.textContent='🔗'" />` : '🔗'}
+        </div>
+        <div class="link-info">
+          <div class="link-title">${escHtml(l.title)}</div>
+          <div class="link-short">yoursite.com/${escHtml(l.code)}</div>
+          <div class="link-dest">${escHtml(l.dest)}</div>
+        </div>
+        <div class="link-actions">
+          <span class="clicks-badge">👁 ${l.clicks}</span>
+          <button class="btn-del" onclick="deleteLink(${l.id})">🗑</button>
+        </div>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function deleteLink(id) {
+    links = links.filter(l => l.id !== id);
+    saveLinks();
+    renderLinks();
+    showToast('🗑 Delete ہو گیا!', '#ef4444');
+  }
+
+  function saveLinks() {
+    localStorage.setItem('linkmagic_links', JSON.stringify(links));
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg, color = '#10b981') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
